@@ -1,6 +1,7 @@
 <?php
 namespace frontend\models;
 
+use Yii;
 use yii\base\Exception;
 use yii\base\Model;
 use common\models\User;
@@ -42,19 +43,28 @@ class SignupForm extends Model
      *
      * @return User|null the saved model or null if saving fails
      * @throws Exception
+     * @throws \Exception
      */
     public function signup()
     {
         if (!$this->validate()) {
             return null;
         }
-        
+
         $user = new User();
         $user->username = $this->username;
         $user->email = $this->email;
         $user->setPassword($this->password);
         $user->generateAuthKey();
-        
-        return $user->save() ? $user : null;
+
+        if (!$user->save()) {
+            return null;
+        }
+
+        $auth = Yii::$app->authManager;
+        $authorRole = $auth->getRole('author');
+        $auth->assign($authorRole, $user->getId());
+
+        return $user;
     }
 }
