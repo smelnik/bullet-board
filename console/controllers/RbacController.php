@@ -51,17 +51,8 @@ class RbacController extends Controller
         $auth->addChild($author, $updateOwnPost);
 
         $adminUser = User::findOne(1);
-        if (empty($adminUser)) {
-            echo 'Notice: User with ID = 1 not found. Please registry first user.' . PHP_EOL;
-        } else {
+        if (!empty($adminUser)) {
             $auth->assign($admin, $adminUser->id);
-        }
-
-        $authorUser = User::findOne(2);
-        if (empty($authorUser)) {
-            echo 'Notice: User with ID = 2 not found. Please registry yet another user.' . PHP_EOL;
-        } else {
-            $auth->assign($author, $authorUser->id);
         }
     }
 }

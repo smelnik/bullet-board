@@ -190,4 +190,19 @@ class User extends ActiveRecord implements IdentityInterface
     {
         $this->password_reset_token = null;
     }
+
+    /**
+     * @param string $username
+     * @return bool
+     */
+    public static function isUserAdmin(string $username): bool
+    {
+        $user = static::findOne([
+            'username' => $username,
+            'status' => self::STATUS_ACTIVE
+        ]);
+
+        $roles = Yii::$app->authManager->getRolesByUser($user->id);
+        return array_key_exists('admin', $roles);
+    }
 }
