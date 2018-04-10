@@ -1,6 +1,7 @@
 <?php
 namespace frontend\models;
 
+use frontend\services\UserService;
 use Yii;
 use yii\base\Exception;
 use yii\base\Model;
@@ -15,6 +16,18 @@ class SignupForm extends Model
     public $email;
     public $password;
 
+    /**
+     * @var UserService
+     */
+    private $userService;
+
+    public function __construct(
+        UserService $userService,
+        array $config = []
+    ) {
+        $this->userService = $userService;
+        parent::__construct($config);
+    }
 
     /**
      * {@inheritdoc}
@@ -51,19 +64,25 @@ class SignupForm extends Model
             return null;
         }
 
-        $user = new User();
-        $user->username = $this->username;
-        $user->email = $this->email;
-        $user->setPassword($this->password);
-        $user->generateAuthKey();
+        $user = $this->userService->createUser(
+            $this->username,
+            $this->email,
+            $this->password
+        );
 
-        if (!$user->save()) {
+        if (!$user) {
+            return null;
+        }
+
+        $userInfo = $this->userService->createUserInfoForUserId($user->id);
+
+        if (!$userInfo) {
             return null;
         }
 
         $auth = Yii::$app->authManager;
-        $role = $auth->getRole($user->getId() === 1 ? 'admin' : 'author');
-        $auth->assign($role, $user->getId());
+        $role = $auth->getRole($user->id === 1 ? 'admin' : 'author');
+        $auth->assign($role, $user->id);
 
         return $user;
     }

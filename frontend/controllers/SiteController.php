@@ -1,23 +1,40 @@
 <?php
+
 namespace frontend\controllers;
 
-use Yii;
-use yii\base\InvalidParamException;
-use yii\web\BadRequestHttpException;
-use yii\web\Controller;
-use yii\filters\VerbFilter;
-use yii\filters\AccessControl;
 use common\models\LoginForm;
 use frontend\models\PasswordResetRequestForm;
 use frontend\models\ResetPasswordForm;
 use frontend\models\SignupForm;
 use frontend\models\ContactForm;
+use frontend\services\UserService;
+use Yii;
+use yii\base\InvalidArgumentException;
+use yii\base\Module;
+use yii\filters\AccessControl;
+use yii\filters\VerbFilter;
+use yii\helpers\Url;
+use yii\web\BadRequestHttpException;
+use yii\web\NotFoundHttpException;
 
 /**
  * Site controller
  */
-class SiteController extends Controller
+class SiteController extends FrontController
 {
+
+    private $userService;
+
+    public function __construct(
+        $id,
+        Module $module,
+        UserService $userService,
+        array $config = []
+    ) {
+        $this->userService = $userService;
+        parent::__construct($id, $module, $config);
+    }
+
     /**
      * {@inheritdoc}
      */
@@ -25,7 +42,7 @@ class SiteController extends Controller
     {
         return [
             'access' => [
-                'class' => AccessControl::className(),
+                'class' => AccessControl::class,
                 'only' => ['logout', 'signup'],
                 'rules' => [
                     [
@@ -41,7 +58,7 @@ class SiteController extends Controller
                 ],
             ],
             'verbs' => [
-                'class' => VerbFilter::className(),
+                'class' => VerbFilter::class,
                 'actions' => [
                     'logout' => ['post'],
                 ],
@@ -106,7 +123,6 @@ class SiteController extends Controller
     public function actionLogout()
     {
         Yii::$app->user->logout();
-
         return $this->goHome();
     }
 
@@ -143,6 +159,24 @@ class SiteController extends Controller
         return $this->render('about');
     }
 
+    public function actionProfile($uid)
+    {
+        $userInfo = $this->userService->getUserInfoByUserId($uid);
+
+        if (!$userInfo) {
+            throw new NotFoundHttpException('User info not found!');
+        }
+
+        if ($this->userService->updateUserInfo($userInfo, Yii::$app->request->post())) {
+            return $this->refresh();
+        }
+
+        return $this->render('profile', [
+            'userInfo' => $userInfo,
+            'isOwner' => $this->userService->isOwnerOfUserId($uid),
+        ]);
+    }
+
     /**
      * Signs user up.
      *
@@ -150,11 +184,14 @@ class SiteController extends Controller
      */
     public function actionSignup()
     {
-        $model = new SignupForm();
+        $model = new SignupForm($this->userService);
         if ($model->load(Yii::$app->request->post())) {
             if ($user = $model->signup()) {
                 if (Yii::$app->getUser()->login($user)) {
-                    return $this->goHome();
+                    return $this->redirect(Url::to([
+                        'site/profile',
+                        'uid' => $user->id
+                    ]));
                 }
             }
         }
@@ -198,7 +235,7 @@ class SiteController extends Controller
     {
         try {
             $model = new ResetPasswordForm($token);
-        } catch (InvalidParamException $e) {
+        } catch (InvalidArgumentException $e) {
             throw new BadRequestHttpException($e->getMessage());
         }
 

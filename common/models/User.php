@@ -5,6 +5,7 @@ use Yii;
 use yii\base\Exception;
 use yii\base\NotSupportedException;
 use yii\behaviors\TimestampBehavior;
+use yii\db\ActiveQuery;
 use yii\db\ActiveRecord;
 use yii\web\IdentityInterface;
 
@@ -21,6 +22,8 @@ use yii\web\IdentityInterface;
  * @property integer $created_at
  * @property integer $updated_at
  * @property string $password write-only password
+ *
+ * @property UserInfo $userInfo
  */
 class User extends ActiveRecord implements IdentityInterface
 {
@@ -189,6 +192,14 @@ class User extends ActiveRecord implements IdentityInterface
     public function removePasswordResetToken()
     {
         $this->password_reset_token = null;
+    }
+
+    /**
+     * @return ActiveQuery|UserInfo
+     */
+    public function getUserInfo(): ActiveQuery
+    {
+        return $this->hasOne(UserInfo::class, ['user_id' => 'id']);
     }
 
     /**
